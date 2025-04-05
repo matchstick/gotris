@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go Tetris</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 20px;
+            color: #fff;
+        }
+        
+        .game-container {
+            display: flex;
+            gap: 20px;
+            position: relative;
+        }
+        
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            grid-template-rows: repeat(20, 30px);
+            gap: 1px;
+            border: 2px solid #444;
+            background-color: #111;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #222;
+        }
+        
+        .filled {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .piece-i {
+            background-color: #00f0f0;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .piece-j {
+            background-color: #0000f0;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .piece-l {
+            background-color: #f0a000;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .piece-o {
+            background-color: #f0f000;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .piece-s {
+            background-color: #00f000;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .piece-t {
+            background-color: #a000f0;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .piece-z {
+            background-color: #f00000;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 200px;
+        }
+        
+        .panel-box {
+            background-color: #222;
+            border: 2px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .next-piece-container {
+            padding: 10px;
+        }
+        
+        #next-piece {
+            display: grid;
+            grid-template-columns: repeat(4, 20px);
+            grid-template-rows: repeat(4, 20px);
+            gap: 1px;
+            margin: 10px auto;
+            width: fit-content;
+        }
+        
+        #next-piece .cell {
+            width: 20px;
+            height: 20px;
+        }
+        
+        h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+            color: #ddd;
+            font-size: 18px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #00f0f0;
+        }
+        
+        .controls {
+            margin-top: auto;
+        }
+        
+        .key-control {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #ddd;
+            font-size: 12px;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background-color: #00a0a0;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #008080;
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 10;
+            width: 70%;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            border: 2px solid #444;
+        }
+        
+        .game-over h2 {
+            color: #f00;
+            margin-top: 0;
+            font-size: 28px;
+            text-transform: uppercase;
+        }
+        
+        .final-score {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #00f0f0;
+            font-weight: bold;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .connection-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .connected {
+            background-color: #008800;
+        }
+        
+        .disconnected {
+            background-color: #880000;
+        }
+        
+        @media (max-width: 600px) {
+            .game-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            #game-board {
+                grid-template-columns: repeat(10, 20px);
+                grid-template-rows: repeat(20, 20px);
+            }
+            
+            .cell {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .info-panel {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div id="game-board"></div>
+        
+        <div class="info-panel">
+            <div class="panel-box next-piece-container">
+                <h3>Next Piece</h3>
+                <div id="next-piece"></div>
+            </div>
+            
+            <div class="panel-box">
+                <h3>Stats</h3>
+                <div class="stat-row">
+                    <span>Score:</span>
+                    <span id="score" class="stat-value">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>Level:</span>
+                    <span id="level" class="stat-value">1</span>
+                </div>
+                <div class="stat-row">
+                    <span>Lines:</span>
+                    <span id="lines" class="stat-value">0</span>
+                </div>
+            </div>
+            
+            <div class="panel-box controls">
+                <h3>Controls</h3>
+                <div class="key-control">
+                    <span>Move Left:</span>
+                    <span class="key">←</span>
+                </div>
+                <div class="key-control">
+                    <span>Move Right:</span>
+                    <span class="key">→</span>
+                </div>
+                <div class="key-control">
+                    <span>Move Down:</span>
+                    <span class="key">↓</span>
+                </div>
+                <div class="key-control">
+                    <span>Rotate:</span>
+                    <span class="key">↑</span>
+                </div>
+                <div class="key-control">
+                    <span>Hard Drop:</span>
+                    <span class="key">Space</span>
+                </div>
+                
+                <button id="new-game">New Game</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="game-over" class="game-over hidden">
+        <h2>Game Over</h2>
+        <p>Your score:</p>
+        <div id="final-score" class="final-score">0</div>
+        <button id="restart">Play Again</button>
+    </div>
+    
+    <div id="connection-status" class="connection-status disconnected">
+        Disconnected
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game constants
+            const BOARD_WIDTH = 10;
+            const BOARD_HEIGHT = 20;
+            
+            // DOM elements
+            const gameBoard = document.getElementById('game-board');
+            const nextPieceDisplay = document.getElementById('next-piece');
+            const scoreElement = document.getElementById('score');
+            const levelElement = document.getElementById('level');
+            const linesElement = document.getElementById('lines');
+            const newGameButton = document.getElementById('new-game');
+            const restartButton = document.getElementById('restart');
+            const gameOverElement = document.getElementById('game-over');
+            const finalScoreElement = document.getElementById('final-score');
+            const connectionStatus = document.getElementById('connection-status');
+            
+            // Direction constants (must match Go backend)
+            const DIRECTION = {
+                LEFT: 0,
+                RIGHT: 1,
+                DOWN: 2,
+                ROTATE: 3
+            };
+
+            // Tetromino shapes for the "next piece" preview
+            const tetrominoDisplays = {
+                0: [ // I
+                    [0, 0, 0, 0],
+                    [1, 1, 1, 1],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                1: [ // J
+                    [1, 0, 0, 0],
+                    [1, 1, 1, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                2: [ // L
+                    [0, 0, 1, 0],
+                    [1, 1, 1, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                3: [ // O
+                    [0, 1, 1, 0],
+                    [0, 1, 1, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                4: [ // S
+                    [0, 1, 1, 0],
+                    [1, 1, 0, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                5: [ // T
+                    [0, 1, 0, 0],
+                    [1, 1, 1, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ],
+                6: [ // Z
+                    [1, 1, 0, 0],
+                    [0, 1, 1, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ]
+            };
+            
+            // Tetromino shapes for rendering (must match backend)
+            const tetrominoShapes = {
+                0: [ // I
+                    [[0, 0], [1, 0], [2, 0], [3, 0]],
+                    [[1, -1], [1, 0], [1, 1], [1, 2]],
+                    [[0, 1], [1, 1], [2, 1], [3, 1]],
+                    [[2, -1], [2, 0], [2, 1], [2, 2]]
+                ],
+                1: [ // J
+                    [[0, 0], [0, 1], [1, 1], [2, 1]],
+                    [[1, 0], [2, 0], [1, 1], [1, 2]],
+                    [[0, 1], [1, 1], [2, 1], [2, 2]],
+                    [[1, 0], [1, 1], [0, 2], [1, 2]]
+                ],
+                2: [ // L
+                    [[2, 0], [0, 1], [1, 1], [2, 1]],
+                    [[1, 0], [1, 1], [1, 2], [2, 2]],
+                    [[0, 1], [1, 1], [2, 1], [0, 2]],
+                    [[0, 0], [1, 0], [1, 1], [1, 2]]
+                ],
+                3: [ // O
+                    [[1, 0], [2, 0], [1, 1], [2, 1]],
+                    [[1, 0], [2, 0], [1, 1], [2, 1]],
+                    [[1, 0], [2, 0], [1, 1], [2, 1]],
+                    [[1, 0], [2, 0], [1, 1], [2, 1]]
+                ],
+                4: [ // S
+                    [[1, 0], [2, 0], [0, 1], [1, 1]],
+                    [[1, 0], [1, 1], [2, 1], [2, 2]],
+                    [[1, 1], [2, 1], [0, 2], [1, 2]],
+                    [[0, 0], [0, 1], [1, 1], [1, 2]]
+                ],
+                5: [ // T
+                    [[1, 0], [0, 1], [1, 1], [2, 1]],
+                    [[1, 0], [1, 1], [2, 1], [1, 2]],
+                    [[0, 1], [1, 1], [2, 1], [1, 2]],
+                    [[1, 0], [0, 1], [1, 1], [1, 2]]
+                ],
+                6: [ // Z
+                    [[0, 0], [1, 0], [1, 1], [2, 1]],
+                    [[2, 0], [1, 1], [2, 1], [1, 2]],
+                    [[0, 1], [1, 1], [1, 2], [2, 2]],
+                    [[1, 0], [0, 1], [1, 1], [0, 2]]
+                ]
+            };
+            
+            // WebSocket connection
+            let socket;
+            let reconnectTimer;
+            let hardDropInterval;
+            
+            // Get tetromino class name
+            function getTetrominoClass(type) {
+                const classes = ['piece-i', 'piece-j', 'piece-l', 'piece-o', 'piece-s', 'piece-t', 'piece-z'];
+                return classes[type];
+            }
+            
+            // Create game board
+            function createGameBoard() {
+                gameBoard.innerHTML = '';
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    for (let x = 0; x < BOARD_WIDTH; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.setAttribute('data-x', x);
+                        cell.setAttribute('data-y', y);
+                        gameBoard.appendChild(cell);
+                    }
+                }
+            }
+            
+            // Create next piece preview
+            function createNextPieceDisplay() {
+                nextPieceDisplay.innerHTML = '';
+                for (let y = 0; y < 4; y++) {
+                    for (let x = 0; x < 4; x++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        nextPieceDisplay.appendChild(cell);
+                    }
+                }
+            }
+            
+            // Update the game board based on game state
+            function updateBoard(gameState) {
+                // Clear all cells
+                const cells = gameBoard.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    cell.className = 'cell';
+                });
+                
+                // Draw the board (fixed pieces)
+                for (let y = 0; y < BOARD_HEIGHT; y++) {
+                    for (let x = 0; x < BOARD_WIDTH; x++) {
+                        const value = gameState.board[y][x];
+                        if (value > 0) {
+                            const cell = gameBoard.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+                            if (cell) {
+                                const pieceType = value - 1;
+                                cell.className = `cell filled ${getTetrominoClass(pieceType)}`;
+                            }
+                        }
+                    }
+                }
+                
+                // Draw the active piece
+                if (!gameState.game_over) {
+                    const piece = gameState.current_piece;
+                    const shape = tetrominoShapes[piece.type][piece.rotation];
+                    
+                    for (const [dx, dy] of shape) {
+                        const x = piece.x + dx;
+                        const y = piece.y + dy;
+                        
+                        if (x >= 0 && x < BOARD_WIDTH && y >= 0 && y < BOARD_HEIGHT) {
+                            const cell = gameBoard.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+                            if (cell) {
+                                cell.className = `cell filled ${getTetrominoClass(piece.type)}`;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Update next piece preview
+            function updateNextPiece(nextPieceType) {
+                const cells = nextPieceDisplay.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    cell.className = 'cell';
+                });
+                
+                const shape = tetrominoDisplays[nextPieceType];
+                let cellIndex = 0;
+                
+                for (let y = 0; y < 4; y++) {
+                    for (let x = 0; x < 4; x++) {
+                        if (shape[y][x] === 1) {
+                            cells[cellIndex].className = `cell filled ${getTetrominoClass(nextPieceType)}`;
+                        }
+                        cellIndex++;
+                    }
+                }
+            }
+            
+            // Update game stats
+            function updateStats(gameState) {
+                scoreElement.textContent = gameState.score;
+                levelElement.textContent = gameState.level;
+                linesElement.textContent = gameState.lines_cleared;
+            }
+            
+            // Show game over screen
+            function showGameOver(score) {
+                gameOverElement.classList.remove('hidden');
+                finalScoreElement.textContent = score;
+                if (hardDropInterval) {
+                    clearInterval(hardDropInterval);
+                    hardDropInterval = null;
+                }
+            }
+            
+            // Connect to WebSocket server
+            function connectWebSocket() {
+                // Clear any existing reconnect timer
+                if (reconnectTimer) {
+                    clearTimeout(reconnectTimer);
+                }
+                
+                // Determine the WebSocket URL based on the current protocol
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const host = window.location.host || 'localhost:8080';
+                const wsUrl = `${protocol}//${host}/ws`;
+                
+                // Close existing connection if any
+                if (socket && socket.readyState !== WebSocket.CLOSED) {
+                    socket.close();
+                }
+                
+                // Create new WebSocket connection
+                socket = new WebSocket(wsUrl);
+                
+                // Connection opened
+                socket.onopen = () => {
+                    console.log('WebSocket connected');
+                    connectionStatus.textContent = 'Connected';
+                    connectionStatus.className = 'connection-status connected';
+                    
+                    // Start a new game
+                    newGame();
+                };
+                
+                // Message received
+                socket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        
+                    	console.log('XXX event received');
+						console.log(message)
+                        if (message.type === 'state_update') {
+
+                    		console.log('XXX state_update received');
+//                            const gameState = JSON.parse(message.payload);
+                            const jsonString = JSON.stringify(message.payload);
+                            const gameState = JSON.parse(jsonString);
+                            
+                            // Update UI based on game state
+                            updateBoard(gameState);
+                            updateNextPiece(gameState.next_piece);
+                            updateStats(gameState);
+                            
+                            // Check for game over
+                            if (gameState.game_over) {
+                                showGameOver(gameState.score);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error processing message:', error);
+                    }
+                };
+                
+                // Connection closed
+                socket.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    connectionStatus.textContent = 'Disconnected - Reconnecting...';
+                    connectionStatus.className = 'connection-status disconnected';
+                    
+                    // Try to reconnect after a delay
+                    reconnectTimer = setTimeout(connectWebSocket, 3000);
+                };
+                
+                // Connection error
+                socket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    connectionStatus.textContent = 'Connection Error';
+                    connectionStatus.className = 'connection-status disconnected';
+                };
+            }
+            
+            // Send a move command to the server
+            function sendMove(direction) {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    const movePayload = JSON.stringify({ direction });
+                    const message = JSON.stringify({
+                        type: 'move',
+                        payload: movePayload
+                    });
+                    socket.send(message);
+                }
+            }
+            
+            // Start a new game
+            function newGame() {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    const message = JSON.stringify({
+                        type: 'new_game',
+                        payload: '{}'
+                    });
+                    socket.send(message);
+                    gameOverElement.classList.add('hidden');
+                    
+                    if (hardDropInterval) {
+                        clearInterval(hardDropInterval);
+                        hardDropInterval = null;
+                    }
+                }
+            }
+            
+            // Handle keyboard controls
+            function handleKeydown(event) {
+                if (gameOverElement.classList.contains('hidden')) {
+                    switch (event.code) {
+                        case 'ArrowLeft':
+                            sendMove(DIRECTION.LEFT);
+                            event.preventDefault();
+                            break;
+                        case 'ArrowRight':
+                            sendMove(DIRECTION.RIGHT);
+                            event.preventDefault();
+                            break;
+                        case 'ArrowDown':
+                            sendMove(DIRECTION.DOWN);
+                            event.preventDefault();
+                            break;
+                        case 'ArrowUp':
+                            sendMove(DIRECTION.ROTATE);
+                            event.preventDefault();
+                            break;
+                        case 'Space':
+                            // Hard drop - rapidly send DOWN commands
+                            if (hardDropInterval) {
+                                clearInterval(hardDropInterval);
+                            }
+                            hardDropInterval = setInterval(() => {
+                                sendMove(DIRECTION.DOWN);
+                            }, 10);
+                            
+                            // Stop after a reasonable time
+                            setTimeout(() => {
+                                if (hardDropInterval) {
+                                    clearInterval(hardDropInterval);
+                                    hardDropInterval = null;
+                                }
+                            }, 500);
+                            
+                            event.preventDefault();
+                            break;
+                    }
+                }
+            }
+            
+            // Handle key up to cancel hard drop
+            function handleKeyup(event) {
+                if (event.code === 'Space' && hardDropInterval) {
+                    clearInterval(hardDropInterval);
+                    hardDropInterval = null;
+                }
+            }
+            
+            // Initialize game
+            function init() {
+                // Create board and UI elements
+                createGameBoard();
+                createNextPieceDisplay();
+                
+                // Add event listeners
+                document.addEventListener('keydown', handleKeydown);
+                document.addEventListener('keyup', handleKeyup);
+                newGameButton.addEventListener('click', newGame);
+                restartButton.addEventListener('click', newGame);
+                
+                // Connect to the server
+                connectWebSocket();
+                
+                // Handle page visibility changes to reconnect if needed
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible' && 
+                        (!socket || socket.readyState !== WebSocket.OPEN)) {
+                        connectWebSocket();
+                    }
+                });
+                
+                // Attempt to reconnect if connection fails
+                window.addEventListener('online', () => {
+                    if (!socket || socket.readyState !== WebSocket.OPEN) {
+                        connectWebSocket();
+                    }
+                });
+            }
+            
+            // Start the game
+            init();
+        });
+    </script>
+</body>
+</html>
