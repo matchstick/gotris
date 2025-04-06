@@ -76,9 +76,10 @@ type Message struct {
 	Payload json.RawMessage `json:"payload"`
 }
 
-// MoveMessage is sent by the client to move pieces
-type MoveMessage struct {
-	Direction Direction `json:"direction"`
+// Message is the websocket message format
+type RecvMessage struct {
+	Type    MessageType `json:"type"`
+	Payload Direction   `json:"payload"`
 }
 
 // Websocket upgrader
@@ -353,7 +354,6 @@ func (g *Game) UpdateScore(linesCleared int) {
 
 // SendState sends the current game state to the client
 func (g *Game) SendState() error {
-	log.Printf("Marshaling State %+v\n", g.state)
 	stateJSON, err := json.Marshal(g.state)
 	if err != nil {
 		return err
@@ -364,19 +364,18 @@ func (g *Game) SendState() error {
 		Payload: stateJSON,
 	}
 
-	log.Printf("Sending msg %+v\n", msg)
 	msgJSON, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Writing to conn\n")
 	return g.conn.WriteMessage(websocket.TextMessage, msgJSON)
 }
 
 // Start begins the game loop
 func (g *Game) Start() {
 
+	log.Println("Started ticker with speed ", g.speed)
 	g.ticker = time.NewTicker(g.speed)
 
 	// Send initial state
@@ -395,6 +394,8 @@ func (g *Game) Start() {
 			case <-g.done:
 				g.ticker.Stop()
 				return
+			default:
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 	}()
@@ -407,36 +408,30 @@ func (g *Game) Start() {
 			break
 		}
 
-		log.Println("hey")
-		var message Message
+		log.Println("Message Read")
+		var message RecvMessage
 		if err := json.Unmarshal(rawMessage, &message); err != nil {
 			log.Println("JSON error:", err)
 			continue
 		}
 
-		log.Println("hey")
 		switch message.Type {
 		case Move:
 			if g.state.GameOver {
 				continue
 			}
 
-			var moveMsg MoveMessage
-			if err := json.Unmarshal(message.Payload, &moveMsg); err != nil {
-				log.Println("Move message error:", err)
-				continue
-			}
-
-			g.MovePiece(moveMsg.Direction)
+			g.MovePiece(message.Payload)
 			g.SendState()
 
 		case NewGame:
 			log.Println("New Game Recvd")
 			g.Reset()
 			if g.ticker != nil {
+				log.Println("TICK STOPPED")
 				g.ticker.Stop()
 			}
-			log.Println("New Tick for new game")
+			log.Println("Sending New game")
 			g.ticker = time.NewTicker(g.speed)
 			g.SendState()
 		}
