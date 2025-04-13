@@ -1,5 +1,5 @@
 # Go parameters
-BINARY_NAME=myapp
+BINARY_NAME=gotris
 MAIN_PACKAGE=./cmd/main.go
 GO=go
 GOTEST=$(GO) test
