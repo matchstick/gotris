@@ -408,7 +408,6 @@ func (g *Game) Start() {
 			break
 		}
 
-		log.Println("Message Read")
 		var message RecvMessage
 		if err := json.Unmarshal(rawMessage, &message); err != nil {
 			log.Println("JSON error:", err)
@@ -425,19 +424,15 @@ func (g *Game) Start() {
 			g.SendState()
 
 		case NewGame:
-			log.Println("New Game Recvd")
 			g.Reset()
 			if g.ticker != nil {
-				log.Println("TICK STOPPED")
 				g.ticker.Stop()
 			}
-			log.Println("Sending New game")
 			g.ticker = time.NewTicker(g.speed)
 			g.SendState()
 		}
 	}
 
-	log.Println("hey")
 	g.done <- true
 }
 
