@@ -142,8 +142,7 @@ func newStartCmd() *cobra.Command {
 				os.Exit(1)
 			}
 
-			fmt.Printf("Point your browser to the URL:\n\n")
-			fmt.Printf("http://%s:%d\n\n", hostname, port)
+			fmt.Printf("http://%s:%d\n", hostname, port)
 
 			err = gotris.NewServer(port, numberOfPlayers)
 			if err != nil {
