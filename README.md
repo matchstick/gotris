@@ -11,8 +11,9 @@ More details coming.
 
 ## Start server
 
-```$ ./gotris start
-
+```
+$ ./gotris start
+http://localhost:8080
 $
 ```
 
