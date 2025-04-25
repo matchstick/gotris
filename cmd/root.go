@@ -30,7 +30,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -54,44 +53,6 @@ func versionCmd() *cobra.Command {
 			fmt.Printf("gotris version: %s\n", version)
 		},
 	}
-}
-
-func findFQDN() (string, error) {
-	// First get the hostname
-	hostname, err := os.Hostname()
-	if err != nil {
-		return "", fmt.Errorf("failed to get hostname: %w", err)
-	}
-
-	// Check if the hostname is already an FQDN (contains at least one dot)
-	if strings.Contains(hostname, ".") {
-		return hostname, nil
-	}
-
-	// If not, try to resolve it to get the FQDN
-	addrs, err := net.LookupIP(hostname)
-	if err != nil {
-		return hostname, fmt.Errorf("failed to lookup IP: %w", err)
-	}
-
-	for _, addr := range addrs {
-		if ipv4 := addr.To4(); ipv4 != nil {
-			// Perform a reverse lookup to get the FQDN
-			names, err := net.LookupAddr(ipv4.String())
-			if err != nil {
-				continue
-			}
-			if len(names) > 0 {
-				// Remove trailing dot from the returned name
-				fqdn := strings.TrimSuffix(names[0], ".")
-				return fqdn, nil
-			}
-		}
-	}
-
-	// If we couldn't determine the FQDN, return the hostname
-	return hostname, nil
-
 }
 
 func isPortLegit(port int) error {
@@ -135,14 +96,6 @@ func newStartCmd() *cobra.Command {
 				fmt.Fprintf(os.Stderr, "Only one player supported now not %d\n", numberOfPlayers)
 				os.Exit(1)
 			}
-
-			hostname, err := findFQDN()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error %v\n", err)
-				os.Exit(1)
-			}
-
-			fmt.Printf("http://%s:%d\n", hostname, port)
 
 			err = gotris.NewServer(port, numberOfPlayers)
 			if err != nil {

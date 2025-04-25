@@ -29,8 +29,10 @@ package gotris
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -71,7 +73,6 @@ func registerSession(c *websocket.Conn, id string) {
 	registry.mutex.Unlock()
 
 	registry.readySessions <- s
-
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +91,44 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	registerSession(conn, sessionID)
 }
 
-func NewServer(port int, numPlayers int) error {
+func findFQDN() (string, error) {
+	// First get the hostname
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("failed to get hostname: %w", err)
+	}
+
+	// Check if the hostname is already an FQDN (contains at least one dot)
+	if strings.Contains(hostname, ".") {
+		return hostname, nil
+	}
+
+	// If not, try to resolve it to get the FQDN
+	addrs, err := net.LookupIP(hostname)
+	if err != nil {
+		return hostname, fmt.Errorf("failed to lookup IP: %w", err)
+	}
+
+	for _, addr := range addrs {
+		if ipv4 := addr.To4(); ipv4 != nil {
+			// Perform a reverse lookup to get the FQDN
+			names, err := net.LookupAddr(ipv4.String())
+			if err != nil {
+				continue
+			}
+			if len(names) > 0 {
+				// Remove trailing dot from the returned name
+				fqdn := strings.TrimSuffix(names[0], ".")
+				return fqdn, nil
+			}
+		}
+	}
+
+	// If we couldn't determine the FQDN, return the hostname
+	return hostname, nil
+}
+
+func NewSoloServer(port int) error {
 	// Set up static file server
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/", fs)
@@ -98,10 +136,24 @@ func NewServer(port int, numPlayers int) error {
 	// Handle WebSocket connection
 	http.HandleFunc("/ws", handleWebSocket)
 
+	hostname, err := findFQDN()
+	if err != nil {
+		return fmt.Errorf("Error %v\n", err)
+	}
+
 	// Start server
+	fmt.Printf("http://%s:%d\n", hostname, port)
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		return fmt.Errorf("Server error: %w", err)
 	}
 
+	return nil
+}
+func NewServer(port int, numPlayers int) error {
+	if numPlayers == 1 {
+		return NewSoloServer(port)
+	}
+
+	fmt.Printf("Multi Player not set up yet....\n")
 	return nil
 }
